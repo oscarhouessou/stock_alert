@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Microphone + Enregistrement</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 40px;
+            text-align: center;
+        }
+
+        #level {
+            width: 300px;
+            height: 30px;
+            background: #eee;
+            margin: 20px auto;
+        }
+
+        #bar {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        button {
+            padding: 20px 40px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+
+        #status {
+            margin: 20px;
+            font-size: 24px;
+        }
+
+        #recordBtn {
+            background: #f44336;
+            color: white;
+            border: none;
+        }
+
+        #recordBtn.recording {
+            background: #4CAF50;
+        }
+
+        audio {
+            margin: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎤 Test du Microphone + Enregistrement</h1>
+
+    <div id="status">Cliquez sur "Démarrer" pour tester</div>
+
+    <div id="level">
+        <div id="bar"></div>
+    </div>
+
+    <button onclick="startTest()">📊 Démarrer le test niveau</button>
+    <button onclick="stopTest()">⏹ Arrêter le test</button>
+
+    <hr style="margin: 30px;">
+
+    <h2>🔴 Enregistrement</h2>
+    <button id="recordBtn" onclick="toggleRecording()">🎙️ Démarrer l'enregistrement</button>
+
+    <div id="recordingStatus">Pas d'enregistrement</div>
+
+    <div id="audioContainer">
+        <!-- Audio player will be added here -->
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        let audioContext;
+        let analyser;
+        let microphone;
+        let animationId;
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let stream;
+
+        async function startTest() {
+            document.getElementById('status').textContent = "Demande d'accès au micro...";
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                document.getElementById('status').textContent = "✅ Micro actif - Parlez !";
+
+                const tracks = stream.getAudioTracks();
+                console.log("Audio tracks:", tracks);
+                if (tracks.length > 0) {
+                    document.getElementById('result').innerHTML =
+                        `<p>Appareil: <strong>${tracks[0].label}</strong></p>`;
+                }
+
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                function updateLevel() {
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    const percent = Math.min(100, average * 2);
+                    document.getElementById('bar').style.width = percent + '%';
+                    document.getElementById('bar').style.background = percent > 10 ? '#4CAF50' : '#f44336';
+                    animationId = requestAnimationFrame(updateLevel);
+                }
+
+                updateLevel();
+
+            } catch (err) {
+                document.getElementById('status').textContent = "❌ Erreur: " + err.message;
+                console.error(err);
+            }
+        }
+
+        function stopTest() {
+            if (animationId) cancelAnimationFrame(animationId);
+            if (audioContext) audioContext.close();
+            document.getElementById('status').textContent = "Test arrêté";
+            document.getElementById('bar').style.width = '0%';
+        }
+
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+
+        async function startRecording() {
+            console.log("Starting recording...");
+
+            if (!stream) {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+            }
+
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                ? 'audio/webm;codecs=opus'
+                : 'audio/webm';
+            console.log("Using MIME type:", mimeType);
+
+            mediaRecorder = new MediaRecorder(stream, { mimeType });
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                console.log("Data available:", event.data.size, "bytes");
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                console.log("Recording stopped, chunks:", audioChunks.length);
+                const audioBlob = new Blob(audioChunks, { type: mimeType });
+                console.log("Blob size:", audioBlob.size);
+
+                // Store blob for later
+                window.lastRecording = audioBlob;
+
+                const audioUrl = URL.createObjectURL(audioBlob);
+                document.getElementById('audioContainer').innerHTML = `
+                    <p>Taille: ${audioBlob.size} bytes</p>
+                    <audio controls src="${audioUrl}"></audio>
+                    <br><br>
+                    <a href="${audioUrl}" download="test_recording.webm">📥 Télécharger</a>
+                    <br><br>
+                    <button onclick="sendToServer()" style="background: #2196F3; color: white; border: none; padding: 15px 30px; font-size: 16px; border-radius: 5px;">
+                        📤 Envoyer au serveur pour transcription
+                    </button>
+                    <div id="serverResult"></div>
+                `;
+            };
+
+            isRecording = true;
+            mediaRecorder.start(250); // Timeslice every 250ms
+            console.log("MediaRecorder started, state:", mediaRecorder.state);
+
+            document.getElementById('recordBtn').textContent = "⏹ Arrêter";
+            document.getElementById('recordBtn').classList.add('recording');
+            document.getElementById('recordingStatus').textContent = "🔴 Enregistrement en cours...";
+        }
+
+        function stopRecording() {
+            console.log("Stopping recording...");
+
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+
+            isRecording = false;
+            document.getElementById('recordBtn').textContent = "🎙️ Démarrer l'enregistrement";
+            document.getElementById('recordBtn').classList.remove('recording');
+            document.getElementById('recordingStatus').textContent = "Enregistrement terminé ✅";
+        }
+
+        async function sendToServer() {
+            if (!window.lastRecording) {
+                alert("Pas d'enregistrement à envoyer !");
+                return;
+            }
+
+            document.getElementById('serverResult').innerHTML = "⏳ Envoi en cours...";
+
+            const formData = new FormData();
+            formData.append("file", window.lastRecording, "command.webm");
+
+            try {
+                const res = await fetch('/command/audio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                console.log("Server response:", data);
+
+                document.getElementById('serverResult').innerHTML = `
+                    <div style="background: #e8f5e9; padding: 20px; margin: 20px; border-radius: 10px; text-align: left;">
+                        <h3>Résultat du serveur:</h3>
+                        <p><strong>Transcription:</strong> ${data.original_text || 'N/A'}</p>
+                        <p><strong>Action:</strong> ${data.action}</p>
+                        <p><strong>Message:</strong> ${data.message}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (err) {
+                console.error("Error:", err);
+                document.getElementById('serverResult').innerHTML = "❌ Erreur: " + err.message;
+            }
+        }
+    </script>
+</body>
+
+</html>

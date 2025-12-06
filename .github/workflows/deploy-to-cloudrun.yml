@@ -1,0 +1,86 @@
+name: Deploy StockAlert to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: stockalert-app
+  REGION: europe-west1
+  IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/stockalert-app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA }}
+
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Check Authentication
+      run: |
+        echo "🔍 Vérification de l'authentification..."
+        SA_EMAIL=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
+        echo "✅ Service Account: $SA_EMAIL"
+        echo "✅ Project ID: $PROJECT_ID"
+
+    - name: Configure Docker
+      run: gcloud auth configure-docker --quiet
+
+    - name: Build and Push Docker image
+      run: |
+        echo "🏗️ Building Docker image..."
+        BUILD_ID=$(gcloud builds submit --tag $IMAGE_NAME --async --format="value(name)" | cut -d'/' -f6)
+        echo "📋 Build ID: $BUILD_ID"
+        
+        if [ -z "$BUILD_ID" ]; then
+          echo "❌ Failed to get Build ID"
+          exit 1
+        fi
+        
+        echo "⏳ Waiting for build..."
+        while true; do
+          BUILD_STATUS=$(gcloud builds describe $BUILD_ID --format="value(status)" 2>/dev/null || echo "UNKNOWN")
+          echo "Status: $BUILD_STATUS"
+          case $BUILD_STATUS in
+            "SUCCESS") echo "✅ Build done!"; break ;;
+            "FAILURE"|"CANCELLED"|"TIMEOUT") echo "❌ Build failed: $BUILD_STATUS"; exit 1 ;;
+            "WORKING"|"QUEUED") sleep 30 ;;
+            *) sleep 30 ;;
+          esac
+        done
+
+    - name: Deploy to Cloud Run
+      run: |
+        echo "🚀 Deploying to Cloud Run..."
+        gcloud run deploy $SERVICE_NAME \
+          --image $IMAGE_NAME \
+          --platform managed \
+          --region $REGION \
+          --allow-unauthenticated \
+          --port 8000 \
+          --memory 2Gi \
+          --cpu 2 \
+          --max-instances 10 \
+          --timeout 300 \
+          --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}"
+        
+        SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region=$REGION --format="value(status.url)")
+        echo "✅ Deployed!"
+        echo "🌐 URL: $SERVICE_URL"

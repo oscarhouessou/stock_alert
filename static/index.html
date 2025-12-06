@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StockAlert</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css?v=10">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div style="width: 24px;"></div> <!-- Spacer -->
+            <h1>Produits</h1>
+            <i class="fa-solid fa-plus header-icon"></i>
+        </header>
+
+        <main>
+            <!-- Stats -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-cubes"></i>
+                    </div>
+                    <h3>Produits</h3>
+                    <p id="total-count">0</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <h3>Valeur Stock</h3>
+                    <p id="total-value">0</p>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="search-container">
+                <div class="search-bar">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Rechercher un produit...">
+                </div>
+            </div>
+
+            <!-- Inventory Title -->
+            <div class="section-title">
+                <span>Inventaire</span>
+                <div class="filter-chips" style="gap: 8px;">
+                    <button class="chip active" data-filter="all">Tous</button>
+                    <button class="chip" data-filter="low">Faible</button>
+                </div>
+            </div>
+
+            <!-- Product List -->
+            <div id="products-list" class="products-grid">
+                <!-- Products injected here -->
+            </div>
+        </main>
+
+        <!-- FAB (Mic) -->
+        <div class="fab-container">
+            <button id="activate-btn" class="fab-btn activate-btn" title="Activer le micro">
+                <i class="fa-solid fa-power-off"></i>
+            </button>
+            <button id="mic-btn" class="fab-btn" style="display: none;" title="Enregistrer">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="toast">Action effectuée</div>
+    </div>
+
+    <script src="/static/app.js?v=1733506160"></script>
+</body>
+
+</html>
