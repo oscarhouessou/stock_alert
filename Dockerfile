@@ -9,11 +9,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install Groq SDK
+RUN pip install groq
+
 # Copy application code
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p models debug_audio
+RUN mkdir -p debug_audio
 
 # Expose port
 EXPOSE 8000
