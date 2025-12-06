@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=10">
+    <link rel="stylesheet" href="/static/style.css?v=13">
 </head>
 
 <body>
@@ -22,24 +22,6 @@
         </header>
 
         <main>
-            <!-- Stats -->
-            <div class="stats-container">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-cubes"></i>
-                    </div>
-                    <h3>Produits</h3>
-                    <p id="total-count">0</p>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fa-solid fa-wallet"></i>
-                    </div>
-                    <h3>Valeur Stock</h3>
-                    <p id="total-value">0</p>
-                </div>
-            </div>
-
             <!-- Search -->
             <div class="search-container">
                 <div class="search-bar">
@@ -48,27 +30,99 @@
                 </div>
             </div>
 
-            <!-- Inventory Title -->
-            <div class="section-title">
-                <span>Inventaire</span>
-                <div class="filter-chips" style="gap: 8px;">
-                    <button class="chip active" data-filter="all">Tous</button>
-                    <button class="chip" data-filter="low">Faible</button>
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <span class="stat-label">Produits</span>
+                    <span class="stat-value" id="total-count">0</span>
+                </div>
+                <div class="stat-card green">
+                    <span class="stat-label">Valeur Stock</span>
+                    <span class="stat-value" id="total-value">0</span>
                 </div>
             </div>
 
+            <!-- Confirmation Modal -->
+            <div id="confirm-modal" class="modal hidden">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Récapitulatif</h2>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="transcription-box">
+                            <span class="transcription-label">Votre commande</span>
+                            <p id="transcription-display" class="transcription-text"></p>
+                        </div>
+
+                        <div id="products-list-modal">
+                            <!-- Editable products injected here -->
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button id="modal-confirm" class="btn btn-confirm">Valider</button>
+                        <button id="modal-cancel" class="btn btn-cancel">Annuler</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Title -->
+            <div class="section-title">
+                <span>Inventaire</span>
+            </div>
+
             <!-- Product List -->
-            <div id="products-list" class="products-grid">
+            <div id="products-list" class="product-list">
                 <!-- Products injected here -->
             </div>
         </main>
 
+        <!-- Start Overlay -->
+        <div id="start-overlay" class="modal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content" style="text-align: center; padding-bottom: 40px;">
+                <div style="font-size: 3rem; margin-bottom: 20px;">👋</div>
+                <h2>Bienvenue sur StockAlert</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 30px;">
+                    Cliquez pour démarrer et activer le microphone
+                </p>
+                <button id="start-app-btn" class="btn btn-confirm">
+                    Commencer
+                </button>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirm-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Récapitulatif</h2>
+                </div>
+
+                <div class="modal-body">
+                    <div class="transcription-box">
+                        <span class="transcription-label">Votre commande</span>
+                        <p id="transcription-display" class="transcription-text"></p>
+                    </div>
+
+                    <div id="products-list-modal">
+                        <!-- Editable products injected here -->
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="modal-confirm" class="btn btn-confirm">Valider</button>
+                    <button id="modal-cancel" class="btn btn-cancel">Annuler</button>
+                </div>
+            </div>
+        </div>
+
         <!-- FAB (Mic) -->
         <div class="fab-container">
-            <button id="activate-btn" class="fab-btn activate-btn" title="Activer le micro">
-                <i class="fa-solid fa-power-off"></i>
-            </button>
-            <button id="mic-btn" class="fab-btn" style="display: none;" title="Enregistrer">
+            <button id="mic-btn" class="mic-btn" title="Enregistrer">
                 <i class="fa-solid fa-microphone"></i>
             </button>
         </div>
@@ -77,7 +131,7 @@
         <div id="toast" class="toast">Action effectuée</div>
     </div>
 
-    <script src="/static/app.js?v=1733506160"></script>
+    <script src="/static/app.js?v=1733507300"></script>
 </body>
 
 </html>

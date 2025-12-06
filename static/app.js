@@ -71,31 +71,37 @@ async function fetchProducts() {
 function renderList(items) {
     productsList.innerHTML = '';
     if (items.length === 0) {
-        productsList.innerHTML = '<div class="loading-spinner">Aucun produit.</div>';
+        productsList.innerHTML = '<div style="text-align:center; padding: 20px; color: #8E8E93;">Aucun produit trouvé.</div>';
         return;
     }
-    items.forEach((p, index) => {
+    items.forEach((p) => {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.dataset.name = p.name;
-        const stockClass = p.quantity < 5 ? 'low' : '';
-        const iconColor = index % 2 === 0 ? 'orange' : 'blue';
-        const icon = index % 2 === 0 ? 'fa-bag-shopping' : 'fa-box';
+
+        // Determine category icon/color
+        let catClass = 'cat-other';
+        let catIcon = 'fa-box';
+        if (p.category === 'alimentation') { catClass = 'cat-alimentation'; catIcon = 'fa-bowl-food'; }
+        else if (p.category === 'vêtements') { catClass = 'cat-vêtements'; catIcon = 'fa-shirt'; }
+        else if (p.category === 'cosmétiques') { catClass = 'cat-cosmétiques'; catIcon = 'fa-spray-can'; }
+
         card.innerHTML = `
-            <div class="card-left">
-                <div class="icon-box ${iconColor}">
-                    <i class="fa-solid ${icon}"></i>
+            <div class="product-info">
+                <div class="product-header">
+                    <span class="product-name">${p.name}</span>
+                    <span class="category-badge ${catClass}">${p.category}</span>
                 </div>
-                <div class="card-info">
-                    <h4>${p.name}</h4>
-                    <div class="tags">
-                        <span class="tag tag-price">${p.price.toLocaleString()} FCFA</span>
-                        <span class="tag tag-stock ${stockClass}">Stock: ${p.quantity}</span>
-                    </div>
+                <div class="product-details">
+                    <span class="product-price">${p.price.toLocaleString()} FCFA</span>
+                    <span class="product-stock">
+                        <i class="fa-solid fa-layer-group" style="font-size: 0.8em;"></i>
+                        ${p.quantity} ${p.unit}
+                    </span>
                 </div>
             </div>
-            <div class="card-menu">
-                <i class="fa-solid fa-ellipsis-vertical"></i>
+            <div class="product-actions">
+                <div class="stock-badge">${p.quantity}</div>
             </div>
         `;
         productsList.appendChild(card);
@@ -115,34 +121,38 @@ let recordingStartTime = null;
 let recordingTimer = null;
 
 async function setupAudio() {
-    console.log("Setting up audio with two-step activation...");
+    console.log("Setting up audio...");
 
-    // Activate button - user must click this first
-    activateBtn.onclick = async function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("ACTIVATE BUTTON CLICKED");
+    // Start Overlay Logic
+    const startOverlay = document.getElementById('start-overlay');
+    const startBtn = document.getElementById('start-app-btn');
+
+    startBtn.onclick = async function () {
+        console.log("Start button clicked");
         await activateAudio();
+        startOverlay.classList.add('hidden');
     };
 
-    // Mic button - use mousedown for more reliable detection
+    // Mic button logic
     micBtn.onmousedown = function (e) {
         e.preventDefault();
         e.stopPropagation();
+
         if (!isActivated) {
-            showToast("⚠️ Cliquez d'abord sur le bouton d'activation");
+            // If somehow not activated, try again
+            activateAudio().then(() => {
+                if (isActivated) startRecording();
+            });
             return;
         }
-        console.log("MIC BUTTON MOUSEDOWN! isRecording:", isRecording);
 
+        console.log("MIC BUTTON MOUSEDOWN! isRecording:", isRecording);
         if (isRecording) {
             stopRecording();
         } else {
             startRecording();
         }
     };
-
-    console.log("Audio setup complete - click the power button to activate");
 }
 
 async function activateAudio() {
@@ -178,8 +188,7 @@ async function activateAudio() {
 
         isActivated = true;
 
-        // Hide activate button, show mic button
-        activateBtn.style.display = 'none';
+        // Show mic button
         micBtn.style.display = 'flex';
 
         showToast("✅ Micro activé ! Cliquez pour enregistrer");

@@ -1,8 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 import shutil
 import os
 import uuid
+
+# Load environment variables
+load_dotenv()
 from models import VoiceCommandResponse, Product, ProductInput, CATEGORIES, UNITS
 from database import init_db, add_product, remove_product, get_product, get_all_products
 from core.transcriber import transcribe_audio
