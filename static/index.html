@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=14">
+    <link rel="stylesheet" href="/static/style.css?v=16">
 </head>
 
 <body>
@@ -94,6 +94,16 @@
             </div>
         </div>
 
+        <!-- Loading Modal -->
+        <div id="loading-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content loading-content">
+                <div class="spinner"></div>
+                <h2>⏳ Analyse en cours...</h2>
+                <p>Transcription et compréhension de votre commande</p>
+            </div>
+        </div>
+
         <!-- Confirmation Modal -->
         <div id="confirm-modal" class="modal hidden">
             <div class="modal-backdrop"></div>
@@ -131,7 +141,7 @@
         <div id="toast" class="toast">Action effectuée</div>
     </div>
 
-    <script src="/static/app.js?v=1733507300"></script>
+    <script src="/static/app.js?v=1733509000"></script>
 </body>
 
 </html>

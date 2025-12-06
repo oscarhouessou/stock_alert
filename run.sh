@@ -10,41 +10,47 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}🚀 Starting StockAlert...${NC}"
 
-# Check if Ollama is installed
-if ! command -v ollama &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Ollama n'est pas installé. Installez-le depuis https://ollama.ai${NC}"
-    exit 1
-fi
-
-# Check if Ollama is already running
-if ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
-    echo -e "${YELLOW}📦 Démarrage d'Ollama en arrière-plan...${NC}"
-    ollama serve > /dev/null 2>&1 &
-    OLLAMA_PID=$!
-    echo "   Ollama PID: $OLLAMA_PID"
-    
-    # Wait for Ollama to start
-    echo -n "   Attente du démarrage"
-    for i in {1..30}; do
-        if curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
-            echo -e " ${GREEN}✓${NC}"
-            break
-        fi
-        echo -n "."
-        sleep 1
-    done
+# Check if Groq is configured
+if grep -q "GROQ_API_KEY=gsk_" .env 2>/dev/null; then
+    echo -e "${GREEN}✨ Mode Cloud (Groq) détecté${NC}"
+    echo -e "${GREEN}✓ Ollama n'est pas nécessaire${NC}"
 else
-    echo -e "${GREEN}✓ Ollama est déjà en cours d'exécution${NC}"
-fi
+    # Check if Ollama is installed
+    if ! command -v ollama &> /dev/null; then
+        echo -e "${YELLOW}⚠️  Ollama n'est pas installé. Installez-le depuis https://ollama.ai${NC}"
+        exit 1
+    fi
 
-# Check if llama3.2 model is available
-echo -n "🔍 Vérification du modèle llama3.2..."
-if ! ollama list | grep -q "llama3.2"; then
-    echo ""
-    echo -e "${YELLOW}📥 Téléchargement du modèle llama3.2 (première fois uniquement)...${NC}"
-    ollama pull llama3.2
-else
-    echo -e " ${GREEN}✓${NC}"
+    # Check if Ollama is already running
+    if ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
+        echo -e "${YELLOW}📦 Démarrage d'Ollama en arrière-plan...${NC}"
+        ollama serve > /dev/null 2>&1 &
+        OLLAMA_PID=$!
+        echo "   Ollama PID: $OLLAMA_PID"
+        
+        # Wait for Ollama to start
+        echo -n "   Attente du démarrage"
+        for i in {1..30}; do
+            if curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
+                echo -e " ${GREEN}✓${NC}"
+                break
+            fi
+            echo -n "."
+            sleep 1
+        done
+    else
+        echo -e "${GREEN}✓ Ollama est déjà en cours d'exécution${NC}"
+    fi
+
+    # Check if llama3.2 model is available
+    echo -n "🔍 Vérification du modèle llama3.2..."
+    if ! ollama list | grep -q "llama3.2"; then
+        echo ""
+        echo -e "${YELLOW}📥 Téléchargement du modèle llama3.2 (première fois uniquement)...${NC}"
+        ollama pull llama3.2
+    else
+        echo -e " ${GREEN}✓${NC}"
+    fi
 fi
 
 # Check if faster-whisper model exists

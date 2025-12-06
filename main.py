@@ -1,9 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import shutil
 import os
 import uuid
+from typing import List, Optional
 
 # Load environment variables
 load_dotenv()
@@ -11,13 +12,15 @@ from models import VoiceCommandResponse, Product, ProductInput, CATEGORIES, UNIT
 from database import init_db, add_product, remove_product, get_product, get_all_products
 from core.transcriber import transcribe_audio
 from core.parser import parse_intent
-from pydantic import BaseModel
-from typing import List, Optional
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-app = FastAPI(title="Voice Inventory App")
+app = FastAPI(
+    title="StockAlert API",
+    description="API de gestion d'inventaire par la voix. Nécessite le header 'X-User-ID' pour isoler les données.",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,128 +30,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Initialize DB on startup
+init_db()
+
+# Dependency to get user_id
+async def get_user_id(x_user_id: str = Header(..., description="Unique ID of the user")):
+    if not x_user_id:
+        raise HTTPException(status_code=400, detail="X-User-ID header is required")
+    return x_user_id
 
 @app.get("/")
-async def read_index():
+async def read_root():
     return FileResponse('static/index.html')
 
-@app.on_event("startup")
-def on_startup():
-    init_db()
+@app.get("/products", response_model=List[Product])
+async def get_products(user_id: str = Depends(get_user_id)):
+    """Get all products for the current user."""
+    return get_all_products(user_id)
 
-@app.get("/api/categories")
-def get_categories():
-    """Return available categories"""
-    return CATEGORIES
-
-@app.get("/api/units")
-def get_units():
-    """Return available units"""
-    return UNITS
-
-@app.post("/command/audio")
-async def process_audio_command(file: UploadFile = File(...)):
-    print(f"\n{'='*50}")
-    print(f"[API] Received audio file: {file.filename}")
-    print(f"[API] Content type: {file.content_type}")
-    
-    # Save temp file
-    temp_filename = f"temp_{uuid.uuid4()}.webm"
-    with open(temp_filename, "wb") as buffer:
-        content = await file.read()
-        buffer.write(content)
-        print(f"[API] Saved temp file: {temp_filename} ({len(content)} bytes)")
-        
-    try:
-        # 1. Transcribe
-        print(f"[API] Starting transcription...")
-        text = transcribe_audio(temp_filename)
-        print(f"[API] Transcribed: '{text}'")
-        
-        # 2. Parse Intent (now supports multiple products)
-        print(f"[API] Parsing intent with Ollama...")
-        intent = parse_intent(text)
-        print(f"[API] Intent: {intent}")
-        
-        action = intent.get("action", "unknown")
-        products = intent.get("products", [])
-        
-        # Convert to ProductInput list
-        product_inputs = []
-        for p in products:
-            product_inputs.append(ProductInput(
-                name=p.get('name', ''),
-                category=p.get('category', 'autres'),
-                unit=p.get('unit', 'Unité'),
-                quantity=p.get('quantity') or 0,
-                price=p.get('price') or 0,
-                description=p.get('description')
-            ))
-        
-        # Build message
-        if action == "add" and product_inputs:
-            product_names = [f"{p.quantity} {p.name}" for p in product_inputs]
-            message = f"Produits à ajouter: {', '.join(product_names)}"
-        elif action == "remove" and product_inputs:
-            product_names = [f"{p.quantity} {p.name}" for p in product_inputs]
-            message = f"Produits à retirer: {', '.join(product_names)}"
-        elif action == "unknown":
-            message = "Commande non comprise. Veuillez réessayer."
-        else:
-            message = f"Action: {action}"
-
-        return {
-            "original_text": text,
-            "action": action,
-            "products": [p.dict() for p in product_inputs],
-            "message": message
-        }
-        
-    except Exception as e:
-        print(f"[API] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-
-@app.get("/products")
-def list_products():
-    return get_all_products()
-
-class AddProductRequest(BaseModel):
-    name: str
-    category: str = "autres"
-    unit: str = "Unité"
-    price: float = 0
-    quantity: int = 0
-    barcode: Optional[str] = None
-    description: Optional[str] = None
-
-class AddMultipleProductsRequest(BaseModel):
-    products: List[AddProductRequest]
-
-@app.post("/products/add")
-def add_product_endpoint(req: AddProductRequest):
-    """Add or update a single product"""
-    product = add_product(
-        name=req.name, 
-        price=req.price, 
-        quantity=req.quantity,
-        category=req.category,
-        unit=req.unit,
-        barcode=req.barcode,
-        description=req.description
+@app.post("/products/add", response_model=Product)
+async def add_product_endpoint(product: ProductInput, user_id: str = Depends(get_user_id)):
+    """Add or update a single product."""
+    return add_product(
+        user_id=user_id,
+        name=product.name,
+        price=product.price,
+        quantity=product.quantity,
+        category=product.category,
+        unit=product.unit,
+        barcode=product.barcode,
+        description=product.description
     )
-    return product
 
-@app.post("/products/add-multiple")
-def add_multiple_products(req: AddMultipleProductsRequest):
-    """Add or update multiple products at once"""
+@app.post("/products/add-multiple", response_model=List[Product])
+async def add_multiple_products(products: List[ProductInput], user_id: str = Depends(get_user_id)):
+    """Add or update multiple products at once."""
     results = []
-    for p in req.products:
-        product = add_product(
+    for p in products:
+        res = add_product(
+            user_id=user_id,
             name=p.name,
             price=p.price,
             quantity=p.quantity,
@@ -157,5 +77,58 @@ def add_multiple_products(req: AddMultipleProductsRequest):
             barcode=p.barcode,
             description=p.description
         )
-        results.append(product)
+        results.append(res)
     return results
+
+@app.post("/command/audio", response_model=VoiceCommandResponse)
+async def process_audio_command(
+    file: UploadFile = File(...), 
+    user_id: str = Depends(get_user_id)
+):
+    """
+    Process an audio file (WebM/WAV) containing a voice command.
+    Returns the parsed intent and products found.
+    """
+    # Save temp file
+    temp_filename = f"temp_{uuid.uuid4()}.webm"
+    with open(temp_filename, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        # 1. Transcribe
+        text = transcribe_audio(temp_filename)
+        
+        # 2. Parse Intent
+        intent = parse_intent(text)
+        
+        # 3. Prepare response
+        products_found = []
+        if intent["action"] == "add" and intent.get("products"):
+            for p in intent["products"]:
+                products_found.append(ProductInput(**p))
+        
+        return VoiceCommandResponse(
+            original_text=text,
+            action=intent["action"],
+            products=products_found,
+            message="Confirmez les produits ci-dessous"
+        )
+        
+    except Exception as e:
+        print(f"Error processing audio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
+
+@app.get("/api/categories")
+def get_categories():
+    return CATEGORIES
+
+@app.get("/api/units")
+def get_units():
+    return UNITS
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")

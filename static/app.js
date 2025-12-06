@@ -1,4 +1,4 @@
-const API_URL = ""; // Relative path
+const API_URL = window.location.origin; // Force absolute URL
 
 // Elements
 const productsList = document.getElementById('products-list');
@@ -12,6 +12,34 @@ let audioChunks = [];
 let isRecording = false;
 let audioStream = null; // Keep stream reference
 let isActivated = false;
+
+// User ID Management
+let userId = localStorage.getItem('stockalert_user_id');
+if (!userId) {
+    userId = 'user_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('stockalert_user_id', userId);
+}
+console.log("User ID:", userId);
+
+// Helper for authenticated fetch
+async function authFetch(url, options = {}) {
+    const headers = options.headers || {};
+    headers['X-User-ID'] = userId;
+    options.headers = headers;
+
+    console.log(`[AuthFetch] ${options.method || 'GET'} ${url}`, headers);
+
+    try {
+        const res = await fetch(url, options);
+        if (!res.ok) {
+            console.error(`[AuthFetch] Error ${res.status}:`, await res.text());
+        }
+        return res;
+    } catch (err) {
+        console.error("[AuthFetch] Network Error:", err);
+        throw err;
+    }
+}
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,7 +85,7 @@ searchInput.addEventListener('input', (e) => {
 // Fetch Products
 async function fetchProducts() {
     try {
-        const res = await fetch(`${API_URL}/products`);
+        const res = await authFetch(`${API_URL}/products`);
         const products = await res.json();
         window.currentProducts = products;
         renderList(products);
@@ -330,18 +358,18 @@ async function sendAudioCommand(blob) {
     formData.append("file", blob, "command.webm");
 
     try {
-        const res = await fetch(`${API_URL}/command/audio`, {
+        const response = await authFetch(`${API_URL}/command/audio`, {
             method: 'POST',
             body: formData
         });
 
-        console.log("Server response status:", res.status);
-        const data = await res.json();
+        console.log("Server response status:", response.status);
+        const data = await response.json();
         console.log("Server response data:", data);
 
         micBtn.classList.remove('processing');
 
-        if (res.ok && data.action !== 'unknown') {
+        if (response.ok && data.action !== 'unknown') {
             // Show confirmation modal (it will hide loading)
             pendingCommand = data;
             showConfirmModal(data);
@@ -361,39 +389,12 @@ async function sendAudioCommand(blob) {
 // LOADING & CONFIRMATION MODALS
 // ========================
 function setupConfirmModal() {
-    // Create loading modal
-    const loadingHTML = `
-        <div id="loading-modal" class="modal hidden">
-            <div class="modal-backdrop"></div>
-            <div class="modal-content loading-content">
-                <div class="spinner"></div>
-                <h2>⏳ Analyse en cours...</h2>
-                <p>Transcription et compréhension de votre commande</p>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', loadingHTML);
+    // Event listeners for existing modal elements
+    const cancelBtn = document.getElementById('modal-cancel');
+    const confirmBtn = document.getElementById('modal-confirm');
 
-    // Create confirm modal
-    const modalHTML = `
-        <div id="confirm-modal" class="modal hidden">
-            <div class="modal-backdrop"></div>
-            <div class="modal-content">
-                <h2>📋 Récapitulatif</h2>
-                <p class="transcription-text" id="transcription-display"></p>
-                <div id="products-list-modal"></div>
-                <div class="modal-actions">
-                    <button id="modal-cancel" class="btn btn-cancel">❌ Annuler</button>
-                    <button id="modal-confirm" class="btn btn-confirm">✅ Valider</button>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-    // Event listeners
-    document.getElementById('modal-cancel').addEventListener('click', hideConfirmModal);
-    document.getElementById('modal-confirm').addEventListener('click', confirmCommand);
+    if (cancelBtn) cancelBtn.addEventListener('click', hideConfirmModal);
+    if (confirmBtn) confirmBtn.addEventListener('click', confirmCommand);
 }
 
 function showLoadingModal() {
@@ -527,16 +528,18 @@ async function confirmCommand() {
 
     try {
         // Send multiple products
-        const res = await fetch(`${API_URL}/products/add-multiple`, {
+        const response = await authFetch(`${API_URL}/products/add-multiple`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ products })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(products)
         });
 
         hideLoadingModal();
 
-        if (res.ok) {
-            const results = await res.json();
+        if (response.ok) {
+            const results = await response.json();
             const totalAdded = products.reduce((sum, p) => sum + p.quantity, 0);
             showToast(`✅ ${products.length} produit(s) ajouté(s) !`);
             fetchProducts();

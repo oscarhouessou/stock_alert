@@ -1,50 +1,97 @@
-# StockAlert - Voice Inventory App
+# 📦 StockAlert API
+API de gestion d'inventaire intelligente par la voix.
 
-Application d'inventaire contrôlée par la voix utilisant FastAPI, Faster-Whisper et Ollama.
+## 🚀 Démarrage Rapide
 
-## Prérequis
+### Pré-requis
+- Python 3.11+
+- FFmpeg (pour le traitement audio)
+- Clé API Groq (recommandé pour la prod) ou Ollama (local)
 
-1. **Python 3.9+**
-2. **Ollama** installé et tournant (`ollama serve`).
-3. Modèle Llama 3.2 téléchargé : `ollama pull llama3.2`
-4. **FFmpeg** (requis pour Whisper, souvent installé par défaut ou via `brew install ffmpeg`).
-
-## Installation
-
+### Installation
 ```bash
-pip install -r requirements.txt
-```
-
-## Démarrage
-
-Lancer le serveur API :
-
-```bash
+./setup.sh
 ./run.sh
 ```
-Ou manuellement :
+
+L'API sera accessible sur `http://localhost:8000`.
+Documentation Swagger : `http://localhost:8000/docs`.
+
+---
+
+## 📱 Intégration Mobile
+
+L'API est conçue pour être facilement intégrée dans des applications mobiles (Flutter, React Native, Swift, Kotlin).
+
+### 🔐 Authentification & Isolation
+L'API utilise un header simple pour isoler les données des utilisateurs.
+**Header requis :** `X-User-ID`
+
+Exemple :
+```http
+GET /products HTTP/1.1
+Host: api.stockalert.com
+X-User-ID: user_123456
+```
+*Générez un UUID unique sur le mobile lors de la première installation et stockez-le.*
+
+### 🎤 Commande Vocale
+Pour envoyer une commande vocale :
+
+**Endpoint :** `POST /command/audio`
+**Format :** `multipart/form-data`
+**Fichier :** `file` (audio/webm ou audio/wav)
+
+Exemple (cURL) :
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+curl -X POST "http://localhost:8000/command/audio" \
+     -H "X-User-ID: user_123" \
+     -F "file=@commande.wav"
 ```
 
-## Utilisation
+**Réponse :**
+```json
+{
+  "original_text": "Ajoute 5 sacs de riz",
+  "action": "add",
+  "products": [
+    {
+      "name": "riz",
+      "category": "alimentation",
+      "unit": "Sac",
+      "quantity": 5,
+      "price": 0
+    }
+  ],
+  "message": "Confirmez les produits ci-dessous"
+}
+```
 
-### Endpoint Vocal
-`POST /command/audio`
-- Envoyer un fichier audio (wav, mp3, etc.) dans le champ `file`.
-- Réponse JSON avec l'action détectée et le résultat.
+### 📦 Gestion des Produits
 
-### Exemple de commandes vocales
-- "Ajoute 15 boîtes de lait à 1200 francs l'unité"
-- "Combien de riz il reste ?"
-- "Retire 5 sacs de ciment"
-- "Quel est le prix du sucre ?"
+#### Récupérer le stock
+`GET /products`
 
-## Structure du Projet
+#### Ajouter/Mettre à jour un produit
+`POST /products/add`
+```json
+{
+  "name": "Riz Parfum",
+  "quantity": 10,
+  "price": 12500,
+  "category": "alimentation",
+  "unit": "Sac"
+}
+```
 
-- `main.py` : Point d'entrée de l'API.
-- `database.py` : Gestion de la base de données SQLite.
-- `core/transcriber.py` : Transcription audio avec Faster-Whisper.
-- `core/parser.py` : Analyse d'intention avec Ollama.
-- `models.py` : Modèles de données Pydantic.
-# stock_alert
+#### Ajout Multiple (Batch)
+`POST /products/add-multiple`
+Envoyez une liste de produits pour réduire les appels réseau.
+
+---
+
+## 🛠️ Stack Technique
+- **Framework** : FastAPI (Python)
+- **Transcription** : Groq Whisper (Prod) / faster-whisper (Local)
+- **LLM** : Groq Llama 3 (Prod) / Ollama (Local)
+- **Base de données** : SQLite (avec support multi-utilisateurs)

@@ -582,8 +582,97 @@ main {
     }
 }
 
+/* Loading Modal Specifics */
+#loading-modal {
+    align-items: center;
+    /* Center vertically */
+    justify-content: center;
+}
+
+.loading-content {
+    background: white;
+    padding: 40px 30px;
+    border-radius: 24px;
+    text-align: center;
+    width: 85%;
+    max-width: 320px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.loading-content h2 {
+    font-size: 1.2rem;
+    margin: 15px 0 8px;
+    color: var(--text-main);
+}
+
+.loading-content p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #E3F2FD;
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    margin: 0 auto;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
+    }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 480px) {
+    .container {
+        padding: 16px;
+        padding-bottom: 120px;
+        /* Space for FAB */
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    /* Make modals full width/height on very small screens if needed */
+    .modal-content {
+        max-height: 85vh;
+        /* Leave space for top bar */
+    }
+
+    /* Adjust loading modal for small screens */
+    .loading-content {
+        width: 90%;
+        padding: 30px 20px;
+    }
+
+    /* Ensure inputs are easy to tap */
+    .edit-input {
+        padding: 12px;
+        font-size: 16px;
+        /* Prevents iOS zoom on focus */
+    }
+
+    /* Adjust FAB position for safe areas */
+    .fab-container {
+        bottom: calc(30px + env(safe-area-inset-bottom));
     }
 }
