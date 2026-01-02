@@ -161,36 +161,43 @@ async function setupAudio() {
         startOverlay.classList.add('hidden');
     };
 
-    // Mic button logic
-    micBtn.onmousedown = function (e) {
+    // Use click instead of mousedown for better compatibility
+    micBtn.onclick = async function (e) {
         e.preventDefault();
-        e.stopPropagation();
+        console.log("[MIC] Click detected. isActivated:", isActivated, "isRecording:", isRecording);
 
         if (!isActivated) {
-            // If somehow not activated, try again
-            activateAudio().then(() => {
-                if (isActivated) startRecording();
-            });
-            return;
+            console.log("[MIC] Trying to activate audio stream...");
+            await activateAudio();
+            if (!isActivated) {
+                console.error("[MIC] Failed to activate audio.");
+                showToast("❌ Impossible d'activer le micro.");
+                return;
+            }
         }
 
-        console.log("MIC BUTTON MOUSEDOWN! isRecording:", isRecording);
         if (isRecording) {
+            console.log("[MIC] Already recording, stopping...");
             stopRecording();
         } else {
-            startRecording();
+            console.log("[MIC] Not recording, starting...");
+            await startRecording();
         }
     };
 }
 
 async function activateAudio() {
     console.log("Activating audio stream...");
-    showToast("⏳ Activation du micro...");
 
-    // Check if mediaDevices is available (requires HTTPS or localhost)
+    // Check for Secure Context (required for getUserMedia)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        showToast("⚠️ Contexte non sécurisé. Le micro ne fonctionnera que via HTTPS ou localhost.");
+    }
+
+    // Check if mediaDevices is available
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.error("mediaDevices not available");
-        showToast("❌ Micro non disponible. Utilisez localhost ou HTTPS.");
+        showToast("❌ Micro non disponible ou accès refusé.");
         return;
     }
 
@@ -202,88 +209,83 @@ async function activateAudio() {
             }
         });
 
-        console.log("Audio stream activated:", audioStream.getAudioTracks().map(t => t.label));
+        console.log("Audio stream activated");
 
-        // IMPORTANT: Keep stream alive with AudioContext (like test page)
-        const audioContext = new AudioContext();
+        // Keep stream alive
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const source = audioContext.createMediaStreamSource(audioStream);
-        // Connect to a gain node to keep it active
         const gainNode = audioContext.createGain();
-        gainNode.gain.value = 0; // Silent
+        gainNode.gain.value = 0;
         source.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        console.log("AudioContext connected to keep stream alive");
 
         isActivated = true;
-
-        // Show mic button
         micBtn.style.display = 'flex';
-
-        showToast("✅ Micro activé ! Cliquez pour enregistrer");
+        showToast("✅ Micro prêt !");
     } catch (err) {
         console.error("Could not activate audio:", err);
-        showToast("❌ Erreur: " + err.message);
+        showToast("❌ Accès micro refusé : " + err.message);
     }
 }
 
 async function initMediaRecorder() {
     console.log("Initializing media recorder...");
     try {
-        // Use pre-initialized stream, or create new one if needed
-        let stream = audioStream;
-        if (!stream) {
-            console.log("No pre-init stream, requesting new one...");
-            stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    sampleRate: 16000
-                }
-            });
-            audioStream = stream;
+        if (!audioStream) {
+            await activateAudio();
+            if (!audioStream) return false;
         }
 
-        console.log("Using stream with tracks:", stream.getAudioTracks().map(t => t.label));
+        // Expanded MIME type support for Safari/Chrome/Firefox
+        const types = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/mp4',
+            'audio/aac',
+            'audio/wav'
+        ];
 
-        // Check available MIME types
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-            ? 'audio/webm;codecs=opus'
-            : 'audio/webm';
-        console.log("Using MIME type:", mimeType);
+        let preferredType = '';
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                preferredType = type;
+                console.log("Selected MIME type:", preferredType);
+                break;
+            }
+        }
 
-        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        if (!preferredType) {
+            console.error("No supported MIME type found for MediaRecorder");
+            showToast("❌ Format audio non supporté par ce navigateur");
+            return false;
+        }
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType: preferredType });
+        window.currentMimeType = preferredType; // Save for blob creation
 
         mediaRecorder.ondataavailable = (event) => {
-            console.log("Audio data available:", event.data.size, "bytes");
             if (event.data.size > 0) {
                 audioChunks.push(event.data);
             }
         };
 
         mediaRecorder.onstop = async () => {
-            console.log("MediaRecorder onstop fired, chunks:", audioChunks.length);
-            const audioBlob = new Blob(audioChunks, { type: mimeType });
-            console.log("Audio blob created:", audioBlob.size, "bytes");
+            console.log("MediaRecorder stopped. Chunks:", audioChunks.length);
+            const audioBlob = new Blob(audioChunks, { type: window.currentMimeType });
             audioChunks = [];
-            await sendAudioCommand(audioBlob);
+            if (audioBlob.size > 1000) { // Avoid sending tiny/empty recordings
+                await sendAudioCommand(audioBlob);
+            } else {
+                micBtn.classList.remove('processing');
+                showToast("🎤 Enregistrement trop court");
+            }
         };
         return true;
     } catch (err) {
-        console.error("Mic init error:", err);
-        showToast("Accès micro refusé");
+        console.error("MediaRecorder init error:", err);
+        showToast("❌ Erreur d'initialisation du micro");
         return false;
-    }
-}
-
-async function toggleRecording() {
-    console.log("toggleRecording called, isRecording:", isRecording);
-
-    if (isRecording) {
-        console.log("Calling stopRecording...");
-        stopRecording();
-    } else {
-        console.log("Calling startRecording...");
-        await startRecording();
     }
 }
 
@@ -295,29 +297,21 @@ async function startRecording() {
         if (!success) return;
     }
 
-    if (mediaRecorder.state === 'recording') {
-        console.log("Already recording, ignoring");
-        return;
-    }
+    if (mediaRecorder.state === 'recording') return;
 
     isRecording = true;
     audioChunks = [];
     recordingStartTime = Date.now();
 
-    // Use timeslice to get data chunks during recording (every 250ms)
     mediaRecorder.start(250);
-    console.log("MediaRecorder started with timeslice, state:", mediaRecorder.state);
-
     micBtn.classList.add('recording');
-    micBtn.style.backgroundColor = '#f44336'; // Red while recording
 
-    // Start timer
     recordingTimer = setInterval(() => {
         const elapsed = ((Date.now() - recordingStartTime) / 1000).toFixed(1);
         micBtn.innerHTML = `<span style="font-size: 14px; font-weight: bold;">${elapsed}s</span>`;
     }, 100);
 
-    showToast("🎤 Parlez maintenant...");
+    showToast("🎤 Je vous écoute...");
 }
 
 function stopRecording() {
@@ -375,11 +369,13 @@ async function sendAudioCommand(blob) {
             showConfirmModal(data);
         } else {
             hideLoadingModal();
+            if (isActivated) micBtn.style.display = 'flex'; // Restore mic
             showToast("❌ Commande non comprise. Réessayez.");
         }
     } catch (err) {
         console.error("Error sending audio:", err);
         hideLoadingModal();
+        if (isActivated) micBtn.style.display = 'flex'; // Restore mic
         micBtn.classList.remove('processing');
         showToast("❌ Erreur de connexion");
     }
@@ -399,18 +395,24 @@ function setupConfirmModal() {
 
 function showLoadingModal() {
     document.getElementById('loading-modal').classList.remove('hidden');
+    micBtn.style.display = 'none';
 }
 
 function hideLoadingModal() {
     document.getElementById('loading-modal').classList.add('hidden');
+    // Note: micBtn visibility will be handled by showConfirmModal or hideConfirmModal
 }
 
 function showConfirmModal(data) {
     hideLoadingModal();
 
+    // Hide mic button during confirmation
+    micBtn.style.display = 'none';
+
     const modal = document.getElementById('confirm-modal');
     const transcriptionDisplay = document.getElementById('transcription-display');
     const productsList = document.getElementById('products-list-modal');
+    const confirmBtn = document.getElementById('modal-confirm');
 
     // Show original transcription
     transcriptionDisplay.textContent = `"${data.original_text || ''}"`;
@@ -421,13 +423,36 @@ function showConfirmModal(data) {
 
     let actionText = '';
     let actionIcon = '';
+    let btnText = 'Valider';
+
     switch (action) {
-        case 'add': actionText = 'Ajouter au stock'; actionIcon = '➕'; break;
-        case 'remove': actionText = 'Retirer du stock'; actionIcon = '➖'; break;
-        case 'check_stock': actionText = 'Vérifier stock'; actionIcon = '🔍'; break;
-        case 'check_value': actionText = 'Vérifier valeur'; actionIcon = '💰'; break;
-        default: actionText = action; actionIcon = '❓';
+        case 'add':
+            actionText = 'Ajouter au stock';
+            actionIcon = '➕';
+            btnText = products.length > 1 ? `Ajouter ${products.length} produits` : 'Ajouter au stock';
+            break;
+        case 'remove':
+            actionText = 'Retirer du stock';
+            actionIcon = '➖';
+            btnText = products.length > 1 ? `Retirer ${products.length} produits` : 'Retirer du stock';
+            break;
+        case 'check_stock':
+            actionText = 'Vérifier stock';
+            actionIcon = '🔍';
+            btnText = 'Compris';
+            break;
+        case 'check_value':
+            actionText = 'Vérifier valeur';
+            actionIcon = '💰';
+            btnText = 'Fermer';
+            break;
+        default:
+            actionText = action;
+            actionIcon = '❓';
+            btnText = 'Valider';
     }
+
+    if (confirmBtn) confirmBtn.textContent = btnText;
 
     // Build form for each product
     let productsHTML = '';
@@ -501,6 +526,11 @@ function showConfirmModal(data) {
 function hideConfirmModal() {
     document.getElementById('confirm-modal').classList.add('hidden');
     pendingCommand = null;
+
+    // Show mic button again if activated
+    if (isActivated) {
+        micBtn.style.display = 'flex';
+    }
 }
 
 async function confirmCommand() {

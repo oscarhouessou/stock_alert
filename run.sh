@@ -1,64 +1,35 @@
 #!/bin/bash
 
 # Activate virtual environment
-source venv/bin/activate
+if [ -d "venv" ]; then
+    source venv/bin/activate
+fi
 
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}🚀 Starting StockAlert...${NC}"
+echo -e "${GREEN}🚀 Starting StockAlert (Cloud Mode)...${NC}"
 
-# Check if Groq is configured
-if grep -q "GROQ_API_KEY=gsk_" .env 2>/dev/null; then
-    echo -e "${GREEN}✨ Mode Cloud (Groq) détecté${NC}"
-    echo -e "${GREEN}✓ Ollama n'est pas nécessaire${NC}"
-else
-    # Check if Ollama is installed
-    if ! command -v ollama &> /dev/null; then
-        echo -e "${YELLOW}⚠️  Ollama n'est pas installé. Installez-le depuis https://ollama.ai${NC}"
-        exit 1
-    fi
-
-    # Check if Ollama is already running
-    if ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
-        echo -e "${YELLOW}📦 Démarrage d'Ollama en arrière-plan...${NC}"
-        ollama serve > /dev/null 2>&1 &
-        OLLAMA_PID=$!
-        echo "   Ollama PID: $OLLAMA_PID"
-        
-        # Wait for Ollama to start
-        echo -n "   Attente du démarrage"
-        for i in {1..30}; do
-            if curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
-                echo -e " ${GREEN}✓${NC}"
-                break
-            fi
-            echo -n "."
-            sleep 1
-        done
-    else
-        echo -e "${GREEN}✓ Ollama est déjà en cours d'exécution${NC}"
-    fi
-
-    # Check if llama3.2 model is available
-    echo -n "🔍 Vérification du modèle llama3.2..."
-    if ! ollama list | grep -q "llama3.2"; then
-        echo ""
-        echo -e "${YELLOW}📥 Téléchargement du modèle llama3.2 (première fois uniquement)...${NC}"
-        ollama pull llama3.2
-    else
-        echo -e " ${GREEN}✓${NC}"
-    fi
+# Check for .env file
+if [ ! -f .env ]; then
+    echo -e "${RED}❌ Erreur: Fichier .env manquant.${NC}"
+    echo "Copiez .env.example vers .env et ajoutez votre GROQ_API_KEY."
+    exit 1
 fi
 
-# Check if faster-whisper model exists
-if [ ! -d "models/faster-whisper-small" ]; then
-    echo -e "${YELLOW}📥 Téléchargement du modèle Whisper...${NC}"
-    python download_model.py
-else
-    echo -e "${GREEN}✓ Modèle Whisper disponible${NC}"
+# Check if Groq is configured
+if ! grep -q "GROQ_API_KEY=gsk_" .env 2>/dev/null; then
+    echo -e "${RED}❌ Erreur: GROQ_API_KEY non configurée dans .env${NC}"
+    echo "L'API nécessite Groq pour le parsing et la transcription."
+    exit 1
+fi
+
+# Check for ffmpeg
+if ! command -v ffmpeg &> /dev/null; then
+    echo -e "${YELLOW}⚠️  Attention: ffmpeg n'est pas installé. La transcription audio risque d'échouer.${NC}"
 fi
 
 echo ""

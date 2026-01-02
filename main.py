@@ -9,7 +9,10 @@ from typing import List, Optional
 # Load environment variables
 load_dotenv()
 from models import VoiceCommandResponse, Product, ProductInput, CATEGORIES, UNITS
-from database import init_db, add_product, remove_product, get_product, get_all_products
+from database import (
+    init_db, get_all_products, add_product, remove_product, 
+    get_product, record_sale, get_sales_history
+)
 from core.transcriber import transcribe_audio
 from core.parser import parse_intent
 
@@ -103,7 +106,7 @@ async def process_audio_command(
         
         # 3. Prepare response
         products_found = []
-        if intent["action"] == "add" and intent.get("products"):
+        if (intent["action"] == "add" or intent["action"] == "sell") and intent.get("products"):
             for p in intent["products"]:
                 products_found.append(ProductInput(**p))
         
@@ -121,6 +124,25 @@ async def process_audio_command(
         # Cleanup
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
+
+@app.get("/sales")
+async def get_sales(user_id: str = Depends(get_user_id)):
+    return get_sales_history(user_id)
+
+@app.post("/sales/confirm")
+async def confirm_sale(
+    products: List[ProductInput], 
+    user_id: str = Depends(get_user_id)
+):
+    # Convert ProductInput to dict for database function
+    items = [{'name': p.name, 'quantity': p.quantity} for p in products]
+    
+    success, message, total = record_sale(user_id, items)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+        
+    return {"status": "success", "message": message, "total_amount": total}
 
 @app.get("/api/categories")
 def get_categories():

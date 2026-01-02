@@ -1,8 +1,6 @@
 fastapi
 uvicorn
 python-multipart
-faster-whisper
-ollama
+groq
 pydantic
 python-dotenv
-groq

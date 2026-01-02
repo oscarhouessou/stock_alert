@@ -9,6 +9,9 @@ fi
 # Activate venv
 source venv/bin/activate
 
+# Update pip
+pip install --upgrade pip
+
 # Install requirements
 echo "Installing dependencies..."
 pip install -r requirements.txt

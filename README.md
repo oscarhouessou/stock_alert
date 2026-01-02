@@ -5,8 +5,8 @@ API de gestion d'inventaire intelligente par la voix.
 
 ### Pré-requis
 - Python 3.11+
-- FFmpeg (pour le traitement audio)
-- Clé API Groq (recommandé pour la prod) ou Ollama (local)
+- FFmpeg (indispensable pour le traitement audio)
+- Clé API Groq (obligatoire)
 
 ### Installation
 ```bash
@@ -90,8 +90,37 @@ Envoyez une liste de produits pour réduire les appels réseau.
 
 ---
 
+## 🤝 Partage & Intégration Équipe
+
+Pour permettre à l'équipe mobile d'intégrer l'API, vous pouvez utiliser les méthodes suivantes :
+
+### 1. Documentation Interactive (Swagger)
+La documentation complète des endpoints, des modèles de données et des tests est disponible en direct :
+- **Swagger UI :** `http://localhost:8000/docs` (Le plus recommandé)
+- **Redoc :** `http://localhost:8000/redoc`
+
+### 2. Partage sur le réseau local
+Si vos collègues sont sur le même réseau Wi-Fi :
+1. Trouvez votre IP locale (ex: `192.168.1.15`).
+2. Partagez l'URL : `http://192.168.1.15:8000/docs`.
+
+### 3. Partage externe rapide (ngrok)
+Pour un accès distant sans déploiement :
+```bash
+ngrok http 8000
+```
+Puis communiquez l'URL fournie par ngrok (ex: `https://abcd-123.ngrok-free.app/docs`).
+
+### 4. Import dans Postman
+Pour les développeurs préférant Postman :
+1. Allez sur `http://localhost:8000/openapi.json`.
+2. Enregistrez le fichier JSON.
+3. Dans Postman, cliquez sur **Import** et sélectionnez ce fichier. Cela créera automatiquement toute la collection.
+
+---
+
 ## 🛠️ Stack Technique
 - **Framework** : FastAPI (Python)
-- **Transcription** : Groq Whisper (Prod) / faster-whisper (Local)
-- **LLM** : Groq Llama 3 (Prod) / Ollama (Local)
-- **Base de données** : SQLite (avec support multi-utilisateurs)
+- **Transcription** : Groq Whisper (Cloud)
+- **LLM** : Groq Llama 3 (Cloud)
+- **Base de données** : SQLite (support multi-utilisateurs via le header `X-User-ID`)

@@ -9,73 +9,61 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=16">
+    <link rel="stylesheet" href="/static/style.css?v=18">
 </head>
 
 <body>
     <div class="app-container">
         <!-- Header -->
         <header>
-            <div style="width: 24px;"></div> <!-- Spacer -->
-            <h1>Produits</h1>
+            <div style="width: 24px;"></div>
+            <h1 id="page-title">Inventaire</h1>
             <i class="fa-solid fa-plus header-icon"></i>
         </header>
 
         <main>
-            <!-- Search -->
-            <div class="search-container">
-                <div class="search-bar">
-                    <i class="fa-solid fa-search"></i>
-                    <input type="text" id="search-input" placeholder="Rechercher un produit...">
-                </div>
-            </div>
-
-            <!-- Stats -->
-            <div class="stats-grid">
-                <div class="stat-card blue">
-                    <span class="stat-label">Produits</span>
-                    <span class="stat-value" id="total-count">0</span>
-                </div>
-                <div class="stat-card green">
-                    <span class="stat-label">Valeur Stock</span>
-                    <span class="stat-value" id="total-value">0</span>
-                </div>
-            </div>
-
-            <!-- Confirmation Modal -->
-            <div id="confirm-modal" class="modal hidden">
-                <div class="modal-backdrop"></div>
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>Récapitulatif</h2>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="transcription-box">
-                            <span class="transcription-label">Votre commande</span>
-                            <p id="transcription-display" class="transcription-text"></p>
-                        </div>
-
-                        <div id="products-list-modal">
-                            <!-- Editable products injected here -->
-                        </div>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button id="modal-confirm" class="btn btn-confirm">Valider</button>
-                        <button id="modal-cancel" class="btn btn-cancel">Annuler</button>
+            <!-- VIEW: INVENTORY -->
+            <div id="view-inventory" class="view active">
+                <!-- Search -->
+                <div class="search-container">
+                    <div class="search-bar">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" id="search-input" placeholder="Rechercher un produit...">
                     </div>
                 </div>
+
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <span class="stat-label">Produits</span>
+                        <span class="stat-value" id="total-count">0</span>
+                    </div>
+                    <div class="stat-card green">
+                        <span class="stat-label">Valeur Stock</span>
+                        <span class="stat-value" id="total-value">0</span>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <span>Liste des produits</span>
+                </div>
+
+                <!-- Product List -->
+                <div id="products-list" class="product-list">
+                    <!-- Products injected here -->
+                </div>
             </div>
 
-            <!-- Inventory Title -->
-            <div class="section-title">
-                <span>Inventaire</span>
-            </div>
-
-            <!-- Product List -->
-            <div id="products-list" class="product-list">
-                <!-- Products injected here -->
+            <!-- VIEW: SALES -->
+            <div id="view-sales" class="view hidden">
+                <div class="section-title">
+                    <span>Historique des ventes</span>
+                </div>
+                <div id="sales-list" class="product-list">
+                    <div class="empty-state">
+                        <p>Aucune vente enregistrée</p>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -137,11 +125,27 @@
             </button>
         </div>
 
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" data-target="view-inventory">
+                <i class="fas fa-box"></i>
+                <span>Inventaire</span>
+            </a>
+            <a href="#" class="nav-item" data-target="view-sales">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Ventes</span>
+            </a>
+            <a href="#" class="nav-item" data-target="view-settings">
+                <i class="fas fa-cog"></i>
+                <span>Paramètres</span>
+            </a>
+        </nav>
+
         <!-- Toast -->
         <div id="toast" class="toast">Action effectuée</div>
     </div>
 
-    <script src="/static/app.js?v=1733509000"></script>
+    <script src="/static/app.js?v=2026.01.02.1818"></script>
 </body>
 
 </html>

@@ -275,16 +275,16 @@ main {
 /* FAB & Mic Button */
 .fab-container {
     position: absolute;
-    bottom: calc(50px + env(safe-area-inset-bottom));
+    bottom: calc(85px + env(safe-area-inset-bottom));
     left: 0;
     right: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 20px;
-    z-index: 20;
+    z-index: 110;
+    /* Higher than bottom-nav (100) */
     pointer-events: none;
-    /* Allow clicking through container */
 }
 
 .mic-btn {
@@ -297,7 +297,7 @@ main {
     box-shadow: 0 8px 20px rgba(0, 122, 255, 0.3);
     font-size: 28px;
     cursor: pointer;
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -673,6 +673,113 @@ main {
 
     /* Adjust FAB position for safe areas */
     .fab-container {
-        bottom: calc(30px + env(safe-area-inset-bottom));
+        bottom: calc(90px + env(safe-area-inset-bottom));
+        /* Higher because of nav bar */
+    }
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    border-top: 1px solid #eee;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: color 0.2s;
+    padding: 4px 12px;
+}
+
+.nav-item i {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+}
+
+.nav-item.active {
+    color: var(--primary);
+}
+
+/* Views */
+.view {
+    display: block;
+    animation: fadeIn 0.3s ease;
+    padding-bottom: 80px;
+    /* Space for nav */
+}
+
+.view.hidden {
+    display: none;
+}
+
+/* Sales List Styles */
+.sale-card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    border: 1px solid #eee;
+}
+
+.sale-info h4 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    color: var(--text-main);
+}
+
+.sale-date {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.sale-amount {
+    text-align: right;
+}
+
+.amount-value {
+    display: block;
+    font-weight: 700;
+    color: #4CAF50;
+    font-size: 1.1rem;
+}
+
+.amount-currency {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

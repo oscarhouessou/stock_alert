@@ -3,9 +3,10 @@ import json
 import re
 from typing import Dict, Any
 
-# Check if we're in production (Groq) or local (Ollama)
+# Ensure we have Groq API Key
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-USE_GROQ = GROQ_API_KEY is not None
+if not GROQ_API_KEY:
+    print("[PARSER] WARNING: GROQ_API_KEY not found in environment variables.")
 
 CATEGORIES = ["alimentation", "vêtements", "cosmétiques", "autres"]
 UNITS = ["Unité", "Kg", "Litre", "Carton", "Sac", "Paquet"]
@@ -14,7 +15,7 @@ SYSTEM_PROMPT = """Tu es un assistant de gestion d'inventaire. Analyse la phrase
 
 IMPORTANT: Une commande peut contenir PLUSIEURS produits. Extrais-les tous.
 
-Actions possibles: "add", "remove", "check_stock", "check_value", "unknown"
+Actions possibles: "add" (entrée stock), "sell" (vente/sortie), "check_stock", "check_value", "unknown"
 
 Catégories disponibles: alimentation, vêtements, cosmétiques, autres
 
@@ -32,6 +33,9 @@ Exemples:
 - "Ajoute 10 sacs de riz à 2500 francs" → 
   {"action": "add", "products": [{"name": "riz", "category": "alimentation", "unit": "Sac", "quantity": 10, "price": 2500}]}
 
+- "Vends 2 cartons de lait" →
+  {"action": "sell", "products": [{"name": "lait", "category": "alimentation", "unit": "Carton", "quantity": 2}]}
+
 Règles pour deviner la catégorie:
 - alimentation: riz, maïs, huile, sucre, sel, lait, farine, etc.
 - vêtements: robe, pantalon, chemise, t-shirt, chaussures, etc.
@@ -45,6 +49,9 @@ def parse_with_groq(text: str) -> Dict[str, Any]:
     """Use Groq API for parsing (production)"""
     from groq import Groq
     
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY est requis pour le parsing.")
+
     client = Groq(api_key=GROQ_API_KEY)
     
     response = client.chat.completions.create(
@@ -60,21 +67,8 @@ def parse_with_groq(text: str) -> Dict[str, Any]:
     return response.choices[0].message.content
 
 
-def parse_with_ollama(text: str) -> str:
-    """Use Ollama for parsing (local development)"""
-    import ollama
-    
-    response = ollama.chat(model='llama3.2', messages=[
-        {'role': 'system', 'content': SYSTEM_PROMPT},
-        {'role': 'user', 'content': text},
-    ])
-    
-    return response['message']['content']
-
-
 def parse_intent(text: str) -> Dict[str, Any]:
     print(f"[PARSER] Input text: '{text}'")
-    print(f"[PARSER] Using: {'Groq API' if USE_GROQ else 'Ollama (local)'}")
     
     # Handle empty or garbage text
     if not text or len(text) < 3:
@@ -88,11 +82,8 @@ def parse_intent(text: str) -> Dict[str, Any]:
         return {"action": "unknown", "products": []}
     
     try:
-        # Choose backend based on environment
-        if USE_GROQ:
-            content = parse_with_groq(text)
-        else:
-            content = parse_with_ollama(text)
+        # Use Groq backend
+        content = parse_with_groq(text)
         
         print(f"[PARSER] LLM response: {content}")
         

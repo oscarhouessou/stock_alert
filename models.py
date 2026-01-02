@@ -28,6 +28,6 @@ class ProductInput(BaseModel):
 
 class VoiceCommandResponse(BaseModel):
     original_text: str = Field(..., description="Transcribed text from audio")
-    action: Literal["add", "remove", "check_stock", "check_value", "unknown"] = Field(..., description="Detected intent")
+    action: Literal["add", "remove", "sell", "check_stock", "check_value", "unknown"] = Field(..., description="Detected intent")
     products: List[ProductInput] = Field([], description="List of products extracted from command")
     message: str = Field(..., description="Human readable response message")
