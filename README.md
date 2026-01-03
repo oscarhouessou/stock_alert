@@ -94,10 +94,17 @@ Envoyez une liste de produits pour réduire les appels réseau.
 
 Pour permettre à l'équipe mobile d'intégrer l'API, vous pouvez utiliser les méthodes suivantes :
 
-### 1. Documentation Interactive (Swagger)
-La documentation complète des endpoints, des modèles de données et des tests est disponible en direct :
-- **Swagger UI :** `http://localhost:8000/docs` (Le plus recommandé)
-- **Redoc :** `http://localhost:8000/redoc`
+### 1. Documention Interactive (Swagger)
+La documentation est le meilleur moyen de collaborer :
+- **Swagger UI (Production) :** `https://stockalert-app-rf6enbq7uq-ew.a.run.app/docs`
+- **Swagger UI (Local) :** `http://localhost:8000/docs`
+
+> [!TIP]
+> Communiquez simplement l'URL de production se terminant par `/docs` à vos développeurs mobile. Ils y trouveront tout le nécessaire (modèles, types, exemples) pour l'intégration.
+
+### 2. URL de Production (Cloud Run)
+L'API est hébergée sur Google Cloud :
+`https://stockalert-app-rf6enbq7uq-ew.a.run.app`
 
 ### 2. Partage sur le réseau local
 Si vos collègues sont sur le même réseau Wi-Fi :
