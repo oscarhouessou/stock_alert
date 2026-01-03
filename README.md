@@ -90,41 +90,6 @@ Envoyez une liste de produits pour réduire les appels réseau.
 
 ---
 
-## 🤝 Partage & Intégration Équipe
-
-Pour permettre à l'équipe mobile d'intégrer l'API, vous pouvez utiliser les méthodes suivantes :
-
-### 1. Documention Interactive (Swagger)
-La documentation est le meilleur moyen de collaborer :
-- **Swagger UI (Production) :** `https://stockalert-app-rf6enbq7uq-ew.a.run.app/docs`
-- **Swagger UI (Local) :** `http://localhost:8000/docs`
-
-> [!TIP]
-> Communiquez simplement l'URL de production se terminant par `/docs` à vos développeurs mobile. Ils y trouveront tout le nécessaire (modèles, types, exemples) pour l'intégration.
-
-### 2. URL de Production (Cloud Run)
-L'API est hébergée sur Google Cloud :
-`https://stockalert-app-rf6enbq7uq-ew.a.run.app`
-
-### 2. Partage sur le réseau local
-Si vos collègues sont sur le même réseau Wi-Fi :
-1. Trouvez votre IP locale (ex: `192.168.1.15`).
-2. Partagez l'URL : `http://192.168.1.15:8000/docs`.
-
-### 3. Partage externe rapide (ngrok)
-Pour un accès distant sans déploiement :
-```bash
-ngrok http 8000
-```
-Puis communiquez l'URL fournie par ngrok (ex: `https://abcd-123.ngrok-free.app/docs`).
-
-### 4. Import dans Postman
-Pour les développeurs préférant Postman :
-1. Allez sur `http://localhost:8000/openapi.json`.
-2. Enregistrez le fichier JSON.
-3. Dans Postman, cliquez sur **Import** et sélectionnez ce fichier. Cela créera automatiquement toute la collection.
-
----
 
 ## 🛠️ Stack Technique
 - **Framework** : FastAPI (Python)
