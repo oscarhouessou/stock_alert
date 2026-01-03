@@ -103,7 +103,8 @@ def get_product(user_id: str, name: str) -> Optional[Product]:
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products WHERE user_id = ? AND name = ?", (user_id, name))
+    # Case-insensitive search
+    cursor.execute("SELECT * FROM products WHERE user_id = ? AND LOWER(name) = LOWER(?)", (user_id, name.strip()))
     row = cursor.fetchone()
     conn.close()
     if row:
@@ -130,8 +131,8 @@ def add_product(user_id: str, name: str, price: float, quantity: int,
     # Clean input
     name = name.strip()
     
-    # Check if exists for this user
-    cursor.execute("SELECT * FROM products WHERE user_id = ? AND name = ?", (user_id, name))
+    # Check if exists for this user (case-insensitive)
+    cursor.execute("SELECT * FROM products WHERE user_id = ? AND LOWER(name) = LOWER(?)", (user_id, name))
     existing = cursor.fetchone()
     
     if existing:
@@ -182,8 +183,8 @@ def remove_product(user_id: str, name: str, quantity: int) -> Tuple[Optional[Pro
     cursor = conn.cursor()
     # Clean input
     name = name.strip()
-    
-    cursor.execute("SELECT * FROM products WHERE user_id = ? AND name = ?", (user_id, name))
+    # Case-insensitive search
+    cursor.execute("SELECT * FROM products WHERE user_id = ? AND LOWER(name) = LOWER(?)", (user_id, name))
     existing = cursor.fetchone()
     
     if not existing:
@@ -259,7 +260,8 @@ def record_sale(user_id: str, items: List[Dict]) -> Tuple[bool, str, float]:
     try:
         for item in items:
             p_name = item['name'].strip()
-            cursor.execute("SELECT * FROM products WHERE user_id = ? AND name = ?", (user_id, p_name))
+            # Case-insensitive search with trim
+            cursor.execute("SELECT * FROM products WHERE user_id = ? AND LOWER(name) = LOWER(?)", (user_id, p_name))
             product = cursor.fetchone()
             
             if not product:
@@ -308,7 +310,15 @@ def get_sales_history(user_id: str):
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+    
+    # Get sales
     cursor.execute("SELECT * FROM sales WHERE user_id = ? ORDER BY date DESC LIMIT 50", (user_id,))
-    sales = cursor.fetchall()
+    sales = [dict(s) for s in cursor.fetchall()]
+    
+    # Get items for each sale
+    for sale in sales:
+        cursor.execute("SELECT * FROM sale_items WHERE sale_id = ?", (sale['id'],))
+        sale['items'] = [dict(item) for item in cursor.fetchall()]
+        
     conn.close()
-    return [dict(s) for s in sales]
+    return sales

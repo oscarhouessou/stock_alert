@@ -31,9 +31,6 @@ async function authFetch(url, options = {}) {
 
     try {
         const res = await fetch(url, options);
-        if (!res.ok) {
-            console.error(`[AuthFetch] Error ${res.status}:`, await res.text());
-        }
         return res;
     } catch (err) {
         console.error("[AuthFetch] Network Error:", err);
@@ -45,10 +42,46 @@ async function authFetch(url, options = {}) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("App initialized");
     fetchProducts();
+    fetchSalesHistory();
     setupAudio();
     setupFilters();
     setupConfirmModal();
+    setupNavigation();
 });
+
+// Navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    const views = document.querySelectorAll('.view');
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = item.dataset.target;
+
+            // Update nav active state
+            navItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            // Show target view
+            views.forEach(v => {
+                if (v.id === target) {
+                    v.classList.remove('hidden');
+                } else {
+                    v.classList.add('hidden');
+                }
+            });
+
+            if (target === 'view-sales') {
+                document.getElementById('page-title').textContent = 'Vente';
+                fetchSalesHistory();
+            } else if (target === 'view-inventory') {
+                document.getElementById('page-title').textContent = 'Inventaire';
+                fetchProducts();
+            }
+        });
+    });
+}
 
 // Filters
 function setupFilters() {
@@ -134,6 +167,80 @@ function renderList(items) {
         `;
         productsList.appendChild(card);
     });
+
+    // Update stock list on sales page too
+    const salesStockList = document.getElementById('sales-stock-list');
+    if (salesStockList) {
+        salesStockList.innerHTML = items
+            .filter(p => p.quantity > 0)
+            .map(p => `
+                <div class="product-card tiny" style="padding: 10px; border-left: 4px solid var(--primary);">
+                    <div class="product-info">
+                        <div class="product-name" style="font-size: 1rem;">${p.name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">${p.quantity} ${p.unit} dispos</div>
+                    </div>
+                    <div class="product-price" style="font-size: 0.9rem;">${p.price.toLocaleString()} FCFA</div>
+                </div>
+            `).join('');
+    }
+}
+
+async function fetchSalesHistory() {
+    try {
+        const response = await authFetch(`${API_URL}/sales`);
+        if (response.ok) {
+            const sales = await response.json();
+            renderSales(sales);
+            updateSalesStats(sales);
+        }
+    } catch (err) {
+        console.error("Error fetching sales:", err);
+    }
+}
+
+function renderSales(sales) {
+    const salesList = document.getElementById('sales-list');
+    if (!salesList) return;
+
+    if (sales.length === 0) {
+        salesList.innerHTML = '<div class="empty-state"><p>Aucune vente enregistrée</p></div>';
+        return;
+    }
+
+    salesList.innerHTML = sales.map(sale => {
+        const date = new Date(sale.date).toLocaleString('fr-FR');
+        const items = sale.items || [];
+        const itemsHtml = items.map(it => `• ${it.product_name} (x${it.quantity})`).join('<br>');
+
+        return `
+            <div class="product-card">
+                <div class="product-info">
+                    <div class="product-name-row">
+                        <span class="product-name">${date}</span>
+                        <span class="product-category bg-purple">Vente #${sale.id}</span>
+                    </div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 5px;">
+                        ${itemsHtml}
+                    </div>
+                </div>
+                <div class="product-details">
+                    <div class="product-price">${sale.total_amount.toLocaleString()} FCFA</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateSalesStats(sales) {
+    const totalAmount = sales.reduce((sum, s) => sum + s.total_amount, 0);
+    const today = new Date().toISOString().split('T')[0];
+    const todaySales = sales.filter(s => s.date.startsWith(today)).length;
+
+    const totalEl = document.getElementById('sales-total-amount');
+    const todayEl = document.getElementById('sales-today-count');
+
+    if (totalEl) totalEl.textContent = `${totalAmount.toLocaleString()} FCFA`;
+    if (todayEl) todayEl.textContent = todaySales;
 }
 
 function updateStats(products) {
@@ -190,7 +297,8 @@ async function activateAudio() {
     console.log("Activating audio stream...");
 
     // Check for Secure Context (required for getUserMedia)
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+    if (window.location.protocol !== 'https:' && !isLocal) {
         showToast("⚠️ Contexte non sécurisé. Le micro ne fonctionnera que via HTTPS ou localhost.");
     }
 
@@ -307,8 +415,7 @@ async function startRecording() {
     micBtn.classList.add('recording');
 
     recordingTimer = setInterval(() => {
-        const elapsed = ((Date.now() - recordingStartTime) / 1000).toFixed(1);
-        micBtn.innerHTML = `<span style="font-size: 14px; font-weight: bold;">${elapsed}s</span>`;
+        // Just keeping the timer for logic, but not updating UI with it
     }, 100);
 
     showToast("🎤 Je vous écoute...");
@@ -370,7 +477,7 @@ async function sendAudioCommand(blob) {
         } else {
             hideLoadingModal();
             if (isActivated) micBtn.style.display = 'flex'; // Restore mic
-            showToast("❌ Commande non comprise. Réessayez.");
+            showToast(data.message || "❌ Commande non comprise. Réessayez.");
         }
     } catch (err) {
         console.error("Error sending audio:", err);
@@ -463,6 +570,16 @@ function showConfirmModal(data) {
     }
 
     products.forEach((p, index) => {
+        // Auto-lookup price if it's a sale and price is missing/0
+        if ((action === 'sell' || action === 'remove') && (!p.price || p.price === 0)) {
+            const existing = window.currentProducts ? window.currentProducts.find(item => item.name.toLowerCase() === p.name.toLowerCase()) : null;
+            if (existing) {
+                p.price = existing.price;
+            }
+        }
+
+        const subtotal = (p.price || 0) * (p.quantity || 0);
+
         productsHTML += `
             <div class="product-edit-card" data-index="${index}">
                 <div class="card-header">
@@ -499,15 +616,22 @@ function showConfirmModal(data) {
                 </div>
                 
                 <div class="edit-row-group">
-                    <div class="edit-row half">
+                    <div class="edit-row half" style="${(action === 'sell' || action === 'remove') ? 'display: none;' : ''}">
                         <label>Prix unitaire (FCFA) *</label>
                         <input type="number" class="edit-input" id="edit-price-${index}" value="${p.price || ''}" min="0" placeholder="0" />
                     </div>
-                    <div class="edit-row half">
+                    <div class="edit-row ${(action === 'sell' || action === 'remove') ? '' : 'half'}">
                         <label>Quantité *</label>
                         <input type="number" class="edit-input" id="edit-qty-${index}" value="${p.quantity || ''}" min="1" placeholder="0" />
                     </div>
                 </div>
+
+                ${(action === 'sell' || action === 'remove') ? `
+                    <div class="subtotal-info" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.85rem; color: #666;">Unit: ${p.price || 0} FCFA</span>
+                        <span style="font-weight: 700; color: #1c1c1e;">Total: ${subtotal.toLocaleString()} FCFA</span>
+                    </div>
+                ` : ''}
                 
                 <div class="edit-row">
                     <label>Description (optionnel)</label>
@@ -553,12 +677,16 @@ async function confirmCommand() {
         products.push({ name, category, unit, price, quantity, description });
     }
 
+    const action = pendingCommand ? pendingCommand.action : 'add';
+    const isSale = (action === 'sell' || action === 'remove');
+
     hideConfirmModal();
     showLoadingModal();
 
     try {
-        // Send multiple products
-        const response = await authFetch(`${API_URL}/products/add-multiple`, {
+        const endpoint = isSale ? `${API_URL}/sales/confirm` : `${API_URL}/products/add-multiple`;
+
+        const response = await authFetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -569,12 +697,19 @@ async function confirmCommand() {
         hideLoadingModal();
 
         if (response.ok) {
-            const results = await response.json();
-            const totalAdded = products.reduce((sum, p) => sum + p.quantity, 0);
-            showToast(`✅ ${products.length} produit(s) ajouté(s) !`);
+            const data = await response.json();
+            if (isSale) {
+                showToast(`✅ Vente enregistrée (${data.total_amount.toLocaleString()} FCFA)`);
+            } else {
+                showToast(`✅ ${products.length} produit(s) traité(s) !`);
+            }
+
+            // Refresh everything
             fetchProducts();
+            fetchSalesHistory();
         } else {
-            showToast("❌ Erreur lors de l'ajout");
+            const error = await response.json();
+            showToast(`❌ Erreur: ${error.detail || "Action impossible"}`);
         }
     } catch (err) {
         hideLoadingModal();
@@ -582,6 +717,7 @@ async function confirmCommand() {
         showToast("❌ Erreur de connexion");
     }
 
+    if (isActivated) micBtn.style.display = 'flex';
     pendingCommand = null;
 }
 
@@ -589,6 +725,7 @@ async function confirmCommand() {
 // UI HELPERS
 // ========================
 function showToast(msg) {
+    console.log("[TOAST]", msg);
     toast.textContent = msg;
     toast.classList.add('visible');
     setTimeout(() => {

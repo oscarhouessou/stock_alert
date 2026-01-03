@@ -9,9 +9,15 @@
     --border: #E5E5EA;
 
     /* Status Colors */
-    --success: #34C759;
-    --warning: #FF9500;
-    --danger: #FF3B30;
+    --green: #34c759;
+    --red: #ff3b30;
+    --purple: #af52de;
+    --orange: #ff9500;
+    --bg-light: #f2f2f7;
+
+    --success: var(--green);
+    --warning: var(--orange);
+    --danger: var(--red);
 
     /* Category Colors */
     --cat-food: #FF9500;
@@ -540,26 +546,32 @@ main {
 /* Toast */
 .toast-container {
     position: fixed;
-    top: 20px;
+    bottom: 100px;
+    /* Above bottom nav */
     left: 0;
     right: 0;
     display: flex;
     justify-content: center;
-    z-index: 200;
+    align-items: center;
+    z-index: 3000;
     pointer-events: none;
+    padding: 0 20px;
 }
 
 .toast {
-    background: rgba(0, 0, 0, 0.8);
+    background: #1c1c1e;
     color: white;
-    padding: 12px 24px;
-    border-radius: 30px;
-    font-size: 0.9rem;
-    font-weight: 500;
+    padding: 14px 24px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
     opacity: 0;
-    transform: translateY(-20px);
-    transition: all 0.3s;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(20px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    max-width: 90%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .toast.visible {
@@ -782,4 +794,39 @@ main {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Ventes Styles */
+.stat-card.purple {
+    background: rgba(175, 82, 222, 0.1);
+    border-left: 4px solid var(--purple);
+}
+
+.stat-card.purple .stat-label {
+    color: var(--purple);
+}
+
+.stat-card.orange {
+    background: rgba(255, 149, 0, 0.1);
+    border-left: 4px solid var(--orange);
+}
+
+.stat-card.orange .stat-label {
+    color: var(--orange);
+}
+
+.bg-purple {
+    background: var(--purple) !important;
+    color: white !important;
+}
+
+.product-card.tiny {
+    margin-bottom: 8px;
+    padding: 12px;
+    background: white !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }

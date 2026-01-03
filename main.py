@@ -110,11 +110,24 @@ async def process_audio_command(
             for p in intent["products"]:
                 products_found.append(ProductInput(**p))
         
+        # Customize message based on intent/transcription
+        text_lower = text.lower()
+        hallucinations = ["sous-titrage", "merci d'avoir regardé", "amara.org", "sous-titres", "st' 501"]
+        
+        is_hallucination = any(h in text_lower for h in hallucinations)
+        
+        if not text or len(text.strip()) < 2 or is_hallucination:
+            msg = "🎤 Je n'ai rien entendu. Parlez un peu plus fort."
+        elif intent["action"] == "unknown":
+            msg = "🤔 Commande non comprise. Réessayez."
+        else:
+            msg = "✅ Confirmez les produits ci-dessous"
+
         return VoiceCommandResponse(
             original_text=text,
             action=intent["action"],
             products=products_found,
-            message="Confirmez les produits ci-dessous"
+            message=msg
         )
         
     except Exception as e:

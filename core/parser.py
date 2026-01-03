@@ -13,13 +13,15 @@ UNITS = ["Unité", "Kg", "Litre", "Carton", "Sac", "Paquet"]
 
 SYSTEM_PROMPT = """Tu es un assistant de gestion d'inventaire. Analyse la phrase et extrais les produits au format JSON.
 
+ACTION CRITIQUE: Si la phrase n'a aucun sens, est du bruit, concerne des "sous-titres", ou n'a aucun rapport avec l'inventaire (ex: "Merci d'avoir regardé", "Sous-titrage"), tu DOIS répondre EXACTEMENT ceci :
+{"action": "unknown", "products": []}
+
 IMPORTANT: Une commande peut contenir PLUSIEURS produits. Extrais-les tous.
 
 Actions possibles: "add" (entrée stock), "sell" (vente/sortie), "check_stock", "check_value", "unknown"
 
-Catégories disponibles: alimentation, vêtements, cosmétiques, autres
-
-Unités disponibles: Unité, Kg, Litre, Carton, Sac, Paquet
+Catégories: alimentation, vêtements, cosmétiques, autres
+Unités: Unité, Kg, Litre, Carton, Sac, Paquet
 
 Format de réponse (JSON uniquement):
 {
@@ -29,20 +31,7 @@ Format de réponse (JSON uniquement):
   ]
 }
 
-Exemples:
-- "Ajoute 10 sacs de riz à 2500 francs" → 
-  {"action": "add", "products": [{"name": "riz", "category": "alimentation", "unit": "Sac", "quantity": 10, "price": 2500}]}
-
-- "Vends 2 cartons de lait" →
-  {"action": "sell", "products": [{"name": "lait", "category": "alimentation", "unit": "Carton", "quantity": 2}]}
-
-Règles pour deviner la catégorie:
-- alimentation: riz, maïs, huile, sucre, sel, lait, farine, etc.
-- vêtements: robe, pantalon, chemise, t-shirt, chaussures, etc.
-- cosmétiques: savon, crème, parfum, maquillage, shampoing, etc.
-- autres: tout le reste
-
-Réponds UNIQUEMENT avec le JSON, rien d'autre."""
+Réponds UNIQUEMENT avec le JSON."""
 
 
 def parse_with_groq(text: str) -> Dict[str, Any]:
@@ -76,8 +65,13 @@ def parse_intent(text: str) -> Dict[str, Any]:
         return {"action": "unknown", "products": []}
     
     # Detect Whisper hallucinations
-    hallucinations = ["sous-titres", "amara.org", "merci d'avoir regardé", "subscribe", "..."]
-    if any(h in text.lower() for h in hallucinations):
+    hallucinations = [
+        "sous-titrage", "sous-titres", "amara.org", "merci d'avoir regardé", 
+        "subscribe", "abonnez-vous", "regardez la vidéo", "st' 501", "st'",
+        "traduction de", "transcription de"
+    ]
+    low_text = text.lower()
+    if any(h in low_text for h in hallucinations):
         print("[PARSER] Detected Whisper hallucination, returning unknown")
         return {"action": "unknown", "products": []}
     

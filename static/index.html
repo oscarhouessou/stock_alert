@@ -56,13 +56,32 @@
 
             <!-- VIEW: SALES -->
             <div id="view-sales" class="view hidden">
+                <!-- Sales Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card purple">
+                        <span class="stat-label">Ventes (Aujourd'hui)</span>
+                        <span class="stat-value" id="sales-today-count">0</span>
+                    </div>
+                    <div class="stat-card orange">
+                        <span class="stat-label">Total Ventes</span>
+                        <span class="stat-value" id="sales-total-amount">0 FCFA</span>
+                    </div>
+                </div>
+
                 <div class="section-title">
-                    <span>Historique des ventes</span>
+                    <span>Historique récent</span>
                 </div>
                 <div id="sales-list" class="product-list">
                     <div class="empty-state">
-                        <p>Aucune vente enregistrée</p>
+                        <p>Chargement des ventes...</p>
                     </div>
+                </div>
+
+                <div class="section-title" style="margin-top: 30px;">
+                    <span>Produits disponibles</span>
+                </div>
+                <div id="sales-stock-list" class="product-list">
+                    <!-- Stock items for quick reference during sales -->
                 </div>
             </div>
         </main>
@@ -141,11 +160,13 @@
             </a>
         </nav>
 
-        <!-- Toast -->
-        <div id="toast" class="toast">Action effectuée</div>
+        <!-- Toast container -->
+        <div id="toast-container" class="toast-container">
+            <div id="toast" class="toast">Action effectuée</div>
+        </div>
     </div>
 
-    <script src="/static/app.js?v=2026.01.02.1818"></script>
+    <script src="/static/app.js?v=2026.01.02.1906"></script>
 </body>
 
 </html>
